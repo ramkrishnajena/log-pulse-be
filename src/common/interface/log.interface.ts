@@ -8,7 +8,7 @@ export interface LogPayload {
   level: LogLevel;
   message: string;
   resourceId: string;
-  timestamp: string; // ISO string
+  timestamp: string;
   traceId: string;
   spanId: string;
   commit: string;
