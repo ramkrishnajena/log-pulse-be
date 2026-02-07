@@ -14,43 +14,81 @@ export async function ingestLog(log: LogPayload) {
   return response;
 }
 
+export async function bulkIngestLogs(logs: any[]) {
+  const body = logs.flatMap((log) => [{ index: { _index: "logs" } }, log]);
+
+  await elasticClient.bulk({
+    refresh: false,
+    body,
+  });
+}
+
 export async function searchLogs(params: LogSearchParams) {
   const {
     q,
+    regex = false,
+
     level,
     resourceId,
     traceId,
     spanId,
     commit,
     parentResourceId,
+
     startDate,
     endDate,
+
     page = 1,
     limit = 10,
   } = params;
 
+  // ---- SAFETY GUARDS (VERY IMPORTANT) ----
+  const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+  const safeLimit =
+    Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 10;
+
+  const from = (safePage - 1) * safeLimit;
+
+  // ---- ELASTICSEARCH QUERY PARTS ----
   const must: any[] = [];
   const filter: any[] = [];
 
-  // Full-text search
+  // ---- FULL TEXT / REGEX SEARCH ----
   if (q) {
-    must.push({
-      match: {
-        message: q,
-      },
-    });
+    if (regex === true) {
+      must.push({
+        regexp: {
+          message: {
+            value: q,
+            flags: "ALL",
+          },
+        },
+      });
+    } else {
+      must.push({
+        match: {
+          message: {
+            query: q,
+            operator: "and",
+          },
+        },
+      });
+    }
   }
 
-  // Exact filters
+  // ---- EXACT MATCH FILTERS (KEYWORD FIELDS) ----
   if (level) filter.push({ term: { level } });
   if (resourceId) filter.push({ term: { resourceId } });
   if (traceId) filter.push({ term: { traceId } });
   if (spanId) filter.push({ term: { spanId } });
   if (commit) filter.push({ term: { commit } });
-  if (parentResourceId)
-    filter.push({ term: { "metadata.parentResourceId": parentResourceId } });
+  if (parentResourceId) {
+    filter.push({
+      term: { "metadata.parentResourceId": parentResourceId },
+    });
+  }
 
-  // Date range
+  // ---- DATE RANGE FILTER ----
   if (startDate || endDate) {
     filter.push({
       range: {
@@ -62,23 +100,36 @@ export async function searchLogs(params: LogSearchParams) {
     });
   }
 
-  const from = (page - 1) * limit;
-
+  // ---- EXECUTE SEARCH ----
   const response = await elasticClient.search({
     index: "logs",
     from,
-    size: limit,
+    size: safeLimit,
     query: {
       bool: {
         must,
         filter,
       },
     },
-    sort: [{ timestamp: { order: "desc" } }],
+    sort: [
+      {
+        timestamp: { order: "desc" },
+      },
+    ],
   });
 
+  // ---- RESPONSE NORMALIZATION ----
+  const hits = response.hits.hits.map((hit: any) => hit._source);
+
+  const total =
+    typeof response.hits.total === "number"
+      ? response.hits.total
+      : (response.hits.total?.value ?? 0);
+
   return {
-    total: response.hits.total,
-    logs: response.hits.hits.map((hit: any) => hit._source),
+    page: safePage,
+    limit: safeLimit,
+    total,
+    logs: hits,
   };
 }

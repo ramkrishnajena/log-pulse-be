@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { ingestLog, searchLogs } from "../services/logService.js";
+import {
+  bulkIngestLogs,
+  ingestLog,
+  searchLogs,
+} from "../services/logService.js";
 import type { LogPayload } from "../common/interface/log.interface.js";
 
 export async function ingestLogController(req: Request, res: Response) {
@@ -10,6 +14,15 @@ export async function ingestLogController(req: Request, res: Response) {
   return res.status(201).json({
     status: 201,
     message: "Log ingested into Elasticsearch",
+    data: null,
+  });
+}
+
+export async function bulkIngestController(req: any, res: any) {
+  await bulkIngestLogs(req.body);
+  res.status(201).json({
+    status: 201,
+    message: "Bulk logs ingested",
     data: null,
   });
 }

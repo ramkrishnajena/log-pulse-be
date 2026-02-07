@@ -17,14 +17,18 @@ export interface LogPayload {
 
 export interface LogSearchParams {
   q?: string;
+  regex?: boolean;
+
   level?: string;
   resourceId?: string;
   traceId?: string;
   spanId?: string;
   commit?: string;
   parentResourceId?: string;
+
   startDate?: string;
   endDate?: string;
+
   page?: number;
   limit?: number;
 }
