@@ -14,3 +14,17 @@ export interface LogPayload {
   commit: string;
   metadata?: LogMetadata;
 }
+
+export interface LogSearchParams {
+  q?: string;
+  level?: string;
+  resourceId?: string;
+  traceId?: string;
+  spanId?: string;
+  commit?: string;
+  parentResourceId?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
