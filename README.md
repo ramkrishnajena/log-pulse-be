@@ -20,6 +20,7 @@ This project is designed as a **production-ready backend service** and fulfills 
 
 ## 📁 Project Structure
 
+```
 LogPulse/
 ├── src/
 │ ├── config/ # Elasticsearch configuration
@@ -33,6 +34,7 @@ LogPulse/
 ├── package.json
 ├── tsconfig.json
 └── README.md
+```
 
 ---
 
